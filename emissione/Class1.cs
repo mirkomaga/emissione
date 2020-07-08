@@ -172,11 +172,10 @@ namespace emissione
                 acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, OpenMode.ForRead) as BlockTable;
                 ObjectId blkRecId = ObjectId.Null;
 
-                //foreach (var singolo in acBlkTbl)
-                //{
-                //    var tmp = singolo.GetObject();
-                //    System.Diagnostics.Debug.WriteLine(tmp);
-                //}
+                foreach (var singolo in acBlkTbl)
+                {
+                    System.Diagnostics.Debug.WriteLine(singolo);
+                }
 
                 //if (acBlkTbl.Has("RamProject_39305"))
                 //{
