@@ -2,16 +2,11 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
-using System.IO;
 using Autodesk.AutoCAD.Windows;
 using System;
+using System.IO;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Reflection;
-using Autodesk.AutoCAD.Geometry;
-using System.Windows.Forms;
-using WinForms = System.Windows.Forms;
-using Autodesk.AutoCAD.Interop;
+using System.Linq;
 
 namespace emissione
 {
@@ -43,16 +38,17 @@ namespace emissione
                 {
                     var nuovoDocumento = this.LockDoc(nomeFile);
 
-                    var layerName = "text";
-                    this.CercaLunghezzaBarra(nuovoDocumento, layerName);
+                    var listaBlocchi = this.ListaBlocchi();
 
-                    //this.CloseDocuments(nuovoDocumento.Name);
+                    var testoToFind = "prova";
+                    //this.findTestoFromTag(listaBlocchi, testoToFind);
+
                     break;
                 }
             }
-            catch
+            catch(System.Exception e)
             {
-                System.Diagnostics.Debug.WriteLine("Directory non trovata!");
+                System.Diagnostics.Debug.WriteLine("Erroraccio: " + e);
             }
 
 
@@ -125,102 +121,142 @@ namespace emissione
                 }
             }
         }
-
-        private void CercaLunghezzaBarra(Document nomeFile, string layerName)
+        private List<BlockReference> ListaBlocchi()
         {
-            var dbTmp = nomeFile.Database;
+            List<BlockReference> result = new List<BlockReference>();
 
-            using (var tr = dbTmp.TransactionManager.StartOpenCloseTransaction())
+            Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+
+            Database acCurDb = acDoc.Database;
+
+            using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
             {
-                var blockTable = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                foreach (ObjectId btrId in blockTable)
+                BlockTable acBlkTbl;
+
+                acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, OpenMode.ForRead) as BlockTable;
+
+                BlockTableRecord acBlkTblRec;
+                acBlkTblRec = acTrans.GetObject(acBlkTbl[BlockTableRecord.ModelSpace], OpenMode.ForRead) as BlockTableRecord;
+
+                foreach (ObjectId asObjId in acBlkTblRec)
+
                 {
-                    var btr = (BlockTableRecord)tr.GetObject(btrId, OpenMode.ForRead);
-                    var textClass = RXObject.GetClass(typeof(DBText));
-                    if (btr.IsLayout)
+                    Entity elem = (Entity)acTrans.GetObject(asObjId, OpenMode.ForRead);
+
+                    if (elem.GetType() == typeof(BlockReference))
                     {
-                        foreach (ObjectId id in btr)
+                        BlockReference br = (BlockReference)acTrans.GetObject(asObjId, OpenMode.ForRead);
+                        result.Add(br);
+                    }
+                }
+            }
+
+            return result;
+        }
+        
+        [CommandMethod("teseeeer")]
+        public void test()
+        {
+
+            var listaBlocchi = this.ListaBlocchi();
+
+            var testoToFind = "PROGRESSIVO";
+            var lunghezzaBarraMax = this.findlunghezzaBarraMax(listaBlocchi, testoToFind);
+
+            var testo = "RICAVARE DA BARRA";
+            var totaleBarra = this.findLunghezzaBarra(listaBlocchi, testo);
+
+            System.Diagnostics.Debug.WriteLine(lunghezzaBarraMax);
+            System.Diagnostics.Debug.WriteLine(totaleBarra);
+        }
+
+        private double findLunghezzaBarra(List<BlockReference> listaBlocchi, string testo)
+        { 
+            List<double> result = new List<double>();
+
+            Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+
+            Database acCurDb = acDoc.Database;
+
+            using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
+            {
+                foreach (BlockReference br in listaBlocchi)
+                {
+                    BlockTableRecord acBlkTblRec = (BlockTableRecord)acTrans.GetObject(br.BlockTableRecord, OpenMode.ForRead);
+                        
+                    foreach (ObjectId obj in acBlkTblRec)
+                    {
+                        Entity ent = (Entity)obj.GetObject(OpenMode.ForRead, false, true);
+                        if (ent != null)
                         {
-                            System.Diagnostics.Debug.WriteLine(System.StringComparison.CurrentCultureIgnoreCase);
-                            if (id.ObjectClass == textClass)
+                            //ed.WriteMessage("Type: " + ent.GetType().ToString() + "\n");
+
+                            if (ent.GetType() == typeof(MText))
                             {
-                                var text = (DBText)tr.GetObject(id, OpenMode.ForRead);
-                                System.Diagnostics.Debug.WriteLine(text);
-                                //if (text.Layer.Equals(layerName, System.StringComparison.CurrentCultureIgnoreCase))
-                                //{
-                                //yield return id;
-                                //}
+                                MText mtext = (MText)acTrans.GetObject(obj, OpenMode.ForRead);
+                                try
+                                {
+                                    string toAnalize = mtext.Text;
+
+                                    if (toAnalize.Contains(testo))
+                                    {
+                                        String[] split = toAnalize.Split("/".ToCharArray());
+
+                                        var tot = Convert.ToDouble(split[2]);
+
+                                        return tot;
+                                    }
+                                }
+                                catch(System.Exception e)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("Erroraccio: " + e);
+                                }
+                            }
+                            else if (ent.GetType() == typeof(DBText))
+                            {
+                                DBText dbtext = (DBText)acTrans.GetObject(obj, OpenMode.ForRead);
+                                ed.WriteMessage("Text-Type: " + ent.GetType().ToString() + "   |   Text-String: " + dbtext.TextString + "\n");
                             }
                         }
                     }
                 }
             }
+            return 0.0;
         }
 
-        [CommandMethod("ListaBlocchi")]
-        public void ListarBloques()
+        private double findlunghezzaBarraMax(List<BlockReference> listaBlocchi, string testoToFind)
         {
-            Database acCurDb;
-            Document doc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
-            acCurDb = doc.Database;
-            Editor ed = doc.Editor;
-            dynamic bt = db.BlockTableId;
+            List<double> result = new List<double>();
+
+            Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+
+            Database acCurDb = acDoc.Database;
 
             using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
             {
-                BlockTable acBlkTbl;
-                acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, OpenMode.ForRead) as BlockTable;
-                ObjectId blkRecId = ObjectId.Null;
-
-                foreach (var singolo in acBlkTbl)
+                foreach (BlockReference br in listaBlocchi)
                 {
-                    System.Diagnostics.Debug.WriteLine(singolo);
+                    foreach (ObjectId id in br.AttributeCollection)
+                    {
+                        AttributeReference attRef = (AttributeReference)acTrans.GetObject(id, OpenMode.ForRead);
+                        try
+                        {
+                            if (attRef.Tag == testoToFind) { 
+                                result.Add(Convert.ToDouble(attRef.TextString));
+                            }
+                        }
+                        catch(System.Exception e)
+                        {
+                            System.Diagnostics.Debug.WriteLine("Error: " + e);
+                        }
+                    }
                 }
-
-                //if (acBlkTbl.Has("RamProject_39305"))
-                //{
-                //    System.Diagnostics.Debug.WriteLine("si!");
-                //}
             }
 
-            //var textEnts = from btrs in (IEnumerable<dynamic>)bt
+            double max = result.Max();
 
-            //               from ent in (IEnumerable<dynamic>)btrs
+            return max;
 
-            //               where
-
-            //               ((ent.IsKindOf(typeof(DBText)) &&
-
-            //                 (ent.TextString.Contains(str))) ||
-
-            //               (ent.IsKindOf(typeof(MText)) &&
-
-            //                 (ent.Contents.Contains(str))))
-
-            //               select ent;
-
-            //using (Transaction tr = db.TransactionManager.StartTransaction())
-            //{
-            //    var blockTable = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-
-            //    var modelSpace = (BlockTableRecord)tr.GetObject(blockTable[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-
-            //    foreach (ObjectId id in modelSpace)
-            //    {
-            //        if (id.ObjectClass.DxfName == "INSERT")
-            //        {
-            //            var blockReference = (BlockReference)tr.GetObject(id, OpenMode.ForRead);
-
-            //            BlockTableRecord acBlkTblRec = tr.GetObject(id, OpenMode.ForRead) as BlockTableRecord;
-
-            //            ed.WriteMessage("\n" + blockReference.Name);
-            //            System.Diagnostics.Debug.WriteLine(acBlkTblRec);
-
-            //        }
-            //    }
-
-            //    tr.Commit();
-            //}
         }
     }
 }
