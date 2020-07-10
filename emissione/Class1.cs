@@ -6,7 +6,10 @@ using Autodesk.AutoCAD.Windows;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
+using System.Diagnostics;
+using Autodesk.AutoCAD.Interop.Common;
 
 namespace emissione
 {
@@ -46,7 +49,7 @@ namespace emissione
                     break;
                 }
             }
-            catch(System.Exception e)
+            catch (System.Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Erroraccio: " + e);
             }
@@ -139,7 +142,6 @@ namespace emissione
                 acBlkTblRec = acTrans.GetObject(acBlkTbl[BlockTableRecord.ModelSpace], OpenMode.ForRead) as BlockTableRecord;
 
                 foreach (ObjectId asObjId in acBlkTblRec)
-
                 {
                     Entity elem = (Entity)acTrans.GetObject(asObjId, OpenMode.ForRead);
 
@@ -153,25 +155,82 @@ namespace emissione
 
             return result;
         }
-        
+
         [CommandMethod("teseeeer")]
         public void test()
         {
-
             var listaBlocchi = this.ListaBlocchi();
 
-            var testoToFind = "PROGRESSIVO";
+            string testoToFind = "PROGRESSIVO";
             var lunghezzaBarraMax = this.findlunghezzaBarraMax(listaBlocchi, testoToFind);
 
-            var testo = "RICAVARE DA BARRA";
-            var totaleBarra = this.findLunghezzaBarra(listaBlocchi, testo);
+            string testo = "RICAVARE DA BARRA";
+            object totaleBarra = this.findLunghezzaBarra(listaBlocchi, testo);
 
-            System.Diagnostics.Debug.WriteLine(lunghezzaBarraMax);
-            System.Diagnostics.Debug.WriteLine(totaleBarra);
+            List<string> valori = new List<string>() { "COMMESSA", "ARTICOLO" };
+
+            IDictionary titolo = this.findTitolo(listaBlocchi, valori);
+
+            List<Table> tabella = this.findTabella();
+
+            foreach (Table tbl in tabella)
+            {
+                IDictionary intestatura = this.getIntestaturaTabella(tbl);
+
+                var toFind = "POS";
+                if (this.findInTable(intestatura, toFind))
+                {
+                    int posizione = (int) intestatura[toFind];
+                    List<string> pos = this.GetTableIndice(tbl, posizione);
+                    
+                    foreach(string p in pos)
+                    {
+                        NamePadre namePadre = new NamePadre ((string) titolo["COMMESSA"], (string) titolo["ARTICOLO"], p );
+
+                        double quantita = this.calcoloQuantita(totaleBarra, lunghezzaBarraMax);
+                    }
+                }
+            }
+
+            //System.Diagnostics.Debug.WriteLine(lunghezzaBarraMax);
+            //System.Diagnostics.Debug.WriteLine(totaleBarra);
+            //System.Diagnostics.Debug.WriteLine(titolo);
         }
 
-        private double findLunghezzaBarra(List<BlockReference> listaBlocchi, string testo)
-        { 
+        private double calcoloQuantita(object lunghezza, double lunghezzaBarraMax)
+        {
+            System.Diagnostics.Debug.WriteLine(lunghezza.lung);
+            return 0.0;
+        }
+
+        private List<string> GetTableIndice(Table tabella, int indice)
+        {
+            List<string> result = new List<string>();
+
+            for (int r = 0; r < tabella.Rows.Count; r++)
+            {
+                if (r != 0)
+                {
+                    var cella = tabella.Cells[r, indice];
+                    result.Add(cella.GetTextString(FormatOption.ForEditing));
+                }
+            }
+
+            return result;
+        }
+        private Boolean findInTable(IDictionary intestatura, string toFind)
+        {
+            var keys = intestatura.Contains(toFind);
+
+            if (keys)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        private object findLunghezzaBarra(List<BlockReference> listaBlocchi, string testo)
+        {
             List<double> result = new List<double>();
 
             Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
@@ -183,7 +242,7 @@ namespace emissione
                 foreach (BlockReference br in listaBlocchi)
                 {
                     BlockTableRecord acBlkTblRec = (BlockTableRecord)acTrans.GetObject(br.BlockTableRecord, OpenMode.ForRead);
-                        
+
                     foreach (ObjectId obj in acBlkTblRec)
                     {
                         Entity ent = (Entity)obj.GetObject(OpenMode.ForRead, false, true);
@@ -202,12 +261,12 @@ namespace emissione
                                     {
                                         String[] split = toAnalize.Split("/".ToCharArray());
 
-                                        var tot = Convert.ToDouble(split[2]);
+                                        var res = new { lunghezza = Convert.ToDouble(split[2]), testo = mtext.Text };
 
-                                        return tot;
+                                        return res;
                                     }
                                 }
-                                catch(System.Exception e)
+                                catch (System.Exception e)
                                 {
                                     System.Diagnostics.Debug.WriteLine("Erroraccio: " + e);
                                 }
@@ -221,9 +280,8 @@ namespace emissione
                     }
                 }
             }
-            return 0.0;
+            return new { };
         }
-
         private double findlunghezzaBarraMax(List<BlockReference> listaBlocchi, string testoToFind)
         {
             List<double> result = new List<double>();
@@ -241,11 +299,12 @@ namespace emissione
                         AttributeReference attRef = (AttributeReference)acTrans.GetObject(id, OpenMode.ForRead);
                         try
                         {
-                            if (attRef.Tag == testoToFind) { 
+                            if (attRef.Tag == testoToFind)
+                            {
                                 result.Add(Convert.ToDouble(attRef.TextString));
                             }
                         }
-                        catch(System.Exception e)
+                        catch (System.Exception e)
                         {
                             System.Diagnostics.Debug.WriteLine("Error: " + e);
                         }
@@ -253,10 +312,117 @@ namespace emissione
                 }
             }
 
-            double max = result.Max();
-
-            return max;
-
+            try
+            {
+                double max = result.Max();
+                return max;
+            }
+            catch (System.Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Error: " + e);
+            }
+            return 0.0;
         }
+        private IDictionary findTitolo(List<BlockReference> listaBlocchi, List<string> testoToFind)
+        {
+            IDictionary<string, string> result = new Dictionary<string, string>();
+
+            Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+
+            Database acCurDb = acDoc.Database;
+
+            using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
+            {
+                foreach (BlockReference br in listaBlocchi)
+                {
+                    foreach (ObjectId id in br.AttributeCollection)
+                    {
+                        AttributeReference attRef = (AttributeReference)acTrans.GetObject(id, OpenMode.ForRead);
+                        try
+                        {
+                            if ((testoToFind).Contains(attRef.Tag))
+                            {
+                                result.Add(attRef.Tag, attRef.TextString);
+                            }
+                        }
+                        catch (System.Exception e)
+                        {
+                            System.Diagnostics.Debug.WriteLine("Error: " + e);
+                        }
+                    }
+                }
+            }
+
+            return (IDictionary)result;
+        }
+
+        private List<Table> findTabella()
+        {
+            List<Table> result = new List<Table>();
+
+            Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+
+            Database acCurDb = acDoc.Database;
+
+            using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
+            {
+                BlockTable acBlkTbl;
+
+                acBlkTbl = acTrans.GetObject(acCurDb.BlockTableId, OpenMode.ForRead) as BlockTable;
+
+                BlockTableRecord acBlkTblRec;
+                acBlkTblRec = acTrans.GetObject(acBlkTbl[BlockTableRecord.ModelSpace], OpenMode.ForRead) as BlockTableRecord;
+
+                foreach (ObjectId asObjId in acBlkTblRec)
+                {
+                    Entity elem = (Entity)acTrans.GetObject(asObjId, OpenMode.ForRead);
+
+                    if (elem.GetType() == typeof(Table))
+                    {
+                        Table tbl = (Table)acTrans.GetObject(asObjId, OpenMode.ForRead);
+                        result.Add(tbl);
+                    }
+                }
+            }
+
+            return result;
+        }
+        public IDictionary getIntestaturaTabella(Table tabella)
+        {
+            IDictionary<string, int> result = new Dictionary<string, int>();
+
+            for (int r = 0; r < tabella.Rows.Count; r++)
+            {
+                var cella = tabella.Cells[r, 0];
+                try
+                {
+                    result.Add(cella.GetTextString(FormatOption.ForEditing), r);
+                }
+                catch
+                {
+
+                }
+            }
+
+            return (IDictionary) result;
+        }
+    }
+
+    public class NamePadre
+    {
+        private string commessaP;
+        private string articoloP;
+        private string posP;
+        public NamePadre(string commessaP, string articoloP, string posP)
+        {
+            commessa = commessaP;
+            articolo = articoloP;
+            pos = posP;
+        }
+        public string commessa { get; set; }
+        public string articolo { get; set; }
+        public string pos { get; set; }
+
+        public override string ToString() => commessa+ articolo + "-"+pos;
     }
 }
