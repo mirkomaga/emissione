@@ -28,6 +28,8 @@ namespace emissione
 
                 try
                 {
+                    excelWorksheet.Columns.AutoFit();
+
                     excelApp.ActiveWorkbook.SaveAs(data["percorso"] + data["nomeFile"], Microsoft.Office.Interop.Excel.XlFileFormat.xlWorkbookNormal);
 
                     excelWorkbook.Close();
@@ -52,6 +54,7 @@ namespace emissione
             {
                 excelWorksheet.Cells[1, tmp.Key] = tmp.Value;
             }
+            
         }
 
         public void WriteData(Worksheet excelWorksheet, IDictionary<int, List<string>> data)

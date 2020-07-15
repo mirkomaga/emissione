@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace emissione
 {
@@ -25,6 +26,7 @@ namespace emissione
         private IDictionary<int, List<string>> dataExcelD;
         private double lunghezzaBarraMax;
         public string path;
+        Form1 frm = new Form1();
 
         [PaletteMethod]
         [CommandMethod("emissione")]
@@ -40,13 +42,28 @@ namespace emissione
             {
                 this.fileArray = Directory.GetFiles(this.path, "*.dwg", SearchOption.AllDirectories);
 
+                int prog = 0;
+
+                frm.pb.Maximum = this.fileArray.Length;
+                frm.Show();
+                frm.lblFile.Update();
+                frm.Update();
+
+
                 foreach (string nomeFile in this.fileArray)
                 {
-                    //this.LockDoc(nomeFile);
-
-                    //Document doc = docCollect.Open(nomeFile);
+                    prog += 1;
 
                     Database db = new Database(false, true);
+
+                    System.Diagnostics.Debug.WriteLine(prog+"/"+this.fileArray.Length);
+
+                    //frm.counter(prog, this.fileArray.Length);
+                    frm.pb.Value = prog;
+                    frm.lblFile.Text = "Nome file: " + System.IO.Path.GetFileName(nomeFile);
+                    frm.lblAnalisi.Text = "Analisi file "+prog+" di "+ this.fileArray.Length;
+                    frm.lblFile.Update();
+                    frm.Update();
 
                     using (db)
                     {
@@ -94,9 +111,9 @@ namespace emissione
 
                         var lunghezzaTot = Convert.ToDouble(totaleBarra["lunghezza"]);
 
-                        var quantita = new LunghezzaPercentuale((double) lunghezzaTot, (double) lunghezzaBarraMax);
+                        var quantita = new LunghezzaPercentuale((double)lunghezzaTot, (double)lunghezzaBarraMax);
 
-                        this.createKeyIfExistDataExcel(new List<int>() { 1,2,3,5 });
+                        this.createKeyIfExistDataExcel(new List<int>() { 1, 2, 3, 5 });
 
                         dataExcelD[1].Add("1");
                         dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
@@ -115,10 +132,19 @@ namespace emissione
                         dataExcelD[3].Add("");
                         dataExcelD[5].Add("");
                     }
-                    //doc.CloseAndDiscard();
                 }
 
+                frm.lblFile.Text = "Compilazione excel in corso.";
+                
+                frm.pb.Visible = false;
+                frm.lblAnalisi.Visible = false;
+
                 this.gestiscoExcel(dataExcelD);
+
+                frm.Close();
+                frm.Dispose();
+
+                System.Windows.Forms.MessageBox.Show("Estrazione lunghezza barre", "Operazione conclusa.", MessageBoxButtons.OK);
             }
             catch (System.Exception e)
             {
@@ -372,7 +398,6 @@ namespace emissione
             a.WriteSample(dataExcel);
         }
     }
-
     public class NamePadre
     {
         private string commessaP;
@@ -389,7 +414,6 @@ namespace emissione
         public string pos { get; set; }
         public override string ToString() => commessa + articolo + "-" + pos;
     }
-
     public class LunghezzaPercentuale
     {
         private double lunghezza;
