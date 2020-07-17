@@ -2,6 +2,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.Windows;
+using EdgeCode;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,145 +16,198 @@ namespace emissione
     public class PaletteMethod : Attribute { }
     public class AnalizzaDwg
     {
-        string[] fileArray = null;
-
-        private static PaletteSet _ps = null;
-
-        private static DocumentCollection docCollect = null;
-        private List<string> pos;
-        private IDictionary titolo;
-        private IDictionary totaleBarra;
-        private IDictionary<int, List<string>> dataExcelD;
-        private double lunghezzaBarraMax;
-        public string path;
-        Form1 frm = new Form1();
+        public static frmBatch frmMain = new frmBatch();
 
         [PaletteMethod]
         [CommandMethod("emissione")]
         public void init()
         {
+            try
+            {
+                frmMain.Show();
+            }
+            catch
+            {
+                frmMain.Dispose();
+                frmMain = new frmBatch();
+                frmMain.Show();
+            }
+        }
+    }
+
+    public static class Main
+    {
+        private static string[] fileArray = null;
+        private static PaletteSet _ps = null;
+        private static DocumentCollection docCollect = null;
+        private static List<string> pos;
+        private static IDictionary titolo;
+        public static IDictionary errore;
+        private static IDictionary<int, List<string>> dataExcelD;
+        private static IDictionary totaleBarra;
+        private static double lunghezzaBarraMax;
+        public static string path;
+        private static Form1 frm = new Form1();
+
+        private static bool tbStatus;
+        private static bool lbStatus;
+
+        public static void processo(List<string> listaFile)
+        {
+
             docCollect = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager;
 
             dataExcelD = new Dictionary<int, List<string>>();
+            errore = new Dictionary<string, IDictionary>();
 
-            this.path = this.ChooseDirectory();
+            int prog = 0;
 
-            try
+            frm.pb.Maximum = listaFile.Count;
+
+            //try
+            //{
+            //    frm.Show();
+            //}
+            //catch
+            //{
+            //    System.Diagnostics.Debug.WriteLine("Form già aperto");
+            //}
+
+            //frm.lblFile.Update();
+            //frm.Update();
+
+
+            foreach (string nomeFile in listaFile)
             {
-                this.fileArray = Directory.GetFiles(this.path, "*.dwg", SearchOption.AllDirectories);
+                prog += 1;
 
-                int prog = 0;
+                tbStatus = false;
+                lbStatus = false;
 
-                frm.pb.Maximum = this.fileArray.Length;
-                frm.Show();
-                frm.lblFile.Update();
-                frm.Update();
+                Database db = new Database(false, true);
 
+                var form = emissione.AnalizzaDwg.frmMain;
 
-                foreach (string nomeFile in this.fileArray)
+                form.tsPd.Maximum = (int) listaFile.Count;
+                form.tsPd.Minimum = (int) 0;
+                form.tsPd.Value = (int) prog;
+                form.nameFile.Text = (string)System.IO.Path.GetFileName(nomeFile);
+                form.counter.Text = prog + "/" + listaFile.Count;
+                form.tsPd.Width = form.statusBot.Width - 30 - (form.lgnd1.Width + form.lgnd2.Width + form.lgnd3.Width + form.nameFile.Width + form.counter.Width);
+                form.Refresh();
+
+                using (db)
                 {
-                    prog += 1;
+                    db.ReadDwgFile(nomeFile, System.IO.FileShare.Read, false, "");
+                    var listaBlocchi = ListaBlocchi(db);
 
-                    Database db = new Database(false, true);
+                    string testoToFind = "PROGRESSIVO";
+                    lunghezzaBarraMax = findlunghezzaBarraMax(db, listaBlocchi, testoToFind);
 
-                    System.Diagnostics.Debug.WriteLine(prog+"/"+this.fileArray.Length);
+                    string testo = "RICAVARE DA BARRA";
+                    totaleBarra = findLunghezzaBarra(db, listaBlocchi, testo);
 
-                    //frm.counter(prog, this.fileArray.Length);
-                    frm.pb.Value = prog;
-                    frm.lblFile.Text = "Nome file: " + System.IO.Path.GetFileName(nomeFile);
-                    frm.lblAnalisi.Text = "Analisi file "+prog+" di "+ this.fileArray.Length;
-                    frm.lblFile.Update();
-                    frm.Update();
-
-                    using (db)
+                    if (lunghezzaBarraMax > 0)
                     {
-                        try
-                        {
-                            db.ReadDwgFile(nomeFile, System.IO.FileShare.Read, false, "");
-                            var listaBlocchi = this.ListaBlocchi(db);
-
-                            string testoToFind = "PROGRESSIVO";
-                            lunghezzaBarraMax = this.findlunghezzaBarraMax(db, listaBlocchi, testoToFind);
-
-                            if (lunghezzaBarraMax != 0)
-                            {
-                                string testo = "RICAVARE DA BARRA";
-                                totaleBarra = this.findLunghezzaBarra(db, listaBlocchi, testo);
-                            }
-
-
-                            List<string> valori = new List<string>() { "COMMESSA", "ARTICOLO" };
-                            titolo = this.findTitolo(db, listaBlocchi, valori);
-
-                            List<Table> tabella = this.findTabella(db);
-
-                            foreach (Table tbl in tabella)
-                            {
-                                IDictionary intestatura = this.getIntestaturaTabella(tbl);
-
-                                var toFind = "POS";
-                                if (this.findInTable(intestatura, toFind))
-                                {
-                                    int posizione = (int)intestatura[toFind];
-                                    pos = this.GetTableIndice(tbl, posizione);
-                                }
-                            }
-                        }
-                        catch(System.Exception e)
-                        {
-                            System.Diagnostics.Debug.WriteLine("Errore nella lettura file: " + e);
-                        }
+                        lbStatus = true;
                     }
 
-                    if (pos.Count > 0 && !string.IsNullOrEmpty(lunghezzaBarraMax.ToString()) && lunghezzaBarraMax != 0 && totaleBarra.Contains("lunghezza"))
+                    if (!String.IsNullOrEmpty((string)totaleBarra["testo"]) && !String.IsNullOrEmpty((string)totaleBarra["lunghezza"]))
                     {
-                        string p = pos[0];
-
-                        var lunghezzaTot = Convert.ToDouble(totaleBarra["lunghezza"]);
-
-                        var quantita = new LunghezzaPercentuale((double)lunghezzaTot, (double)lunghezzaBarraMax);
-
-                        this.createKeyIfExistDataExcel(new List<int>() { 1, 2, 3, 5 });
-
-                        dataExcelD[1].Add("1");
-                        dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
-                        dataExcelD[3].Add((string)totaleBarra["testo"]);
-                        dataExcelD[5].Add(quantita.ToString());
-
+                        tbStatus = true;
                     }
-                    else
+
+                    List<string> valori = new List<string>() { "COMMESSA", "ARTICOLO" };
+                    titolo = findTitolo(db, listaBlocchi, valori);
+
+                    List<Table> tabella = findTabella(db);
+
+                    foreach (Table tbl in tabella)
                     {
-                        string p = pos[0];
+                        IDictionary intestatura = getIntestaturaTabella(tbl);
 
-                        this.createKeyIfExistDataExcel(new List<int>() { 1, 2, 3, 5 });
-
-                        dataExcelD[1].Add("1");
-                        dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
-                        dataExcelD[3].Add("");
-                        dataExcelD[5].Add("");
+                        var toFind = "POS";
+                        if (findInTable(intestatura, toFind))
+                        {
+                            int posizione = (int)intestatura[toFind];
+                            pos = GetTableIndice(tbl, posizione);
+                        }
                     }
                 }
 
-                frm.lblFile.Text = "Compilazione excel in corso.";
+                if (pos.Count > 0 && tbStatus && lbStatus)
+                {
+                    string p = pos[0];
+
+                    var lunghezzaTot = Convert.ToDouble(totaleBarra["lunghezza"]);
+
+                    var quantita = new LunghezzaPercentuale((double)lunghezzaTot, (double)lunghezzaBarraMax);
+
+                    createKeyIfExistDataExcel(new List<int>() { 1, 2, 3, 5 });
+
+                    dataExcelD[1].Add("1");
+                    dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
+                    dataExcelD[3].Add((string)totaleBarra["testo"]);
+                    dataExcelD[5].Add(quantita.ToString());
+
+                    dataExcelD[1].Add("2");
+                    dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
+                    dataExcelD[3].Add("");
+                    dataExcelD[5].Add("");
+
+                    dataExcelD[1].Add("");
+                    dataExcelD[2].Add("");
+                    dataExcelD[3].Add("");
+                    dataExcelD[5].Add("");
+
+                }
+                else
+                {
+                    string p = pos[0];
+
+                    IDictionary<string, bool> e = new Dictionary<string, bool>();
+
+                    if (lbStatus == false)
+                    {
+                        e.Add("lb", false);
+                    }
+
+                    if (tbStatus == false)
+                    {
+                        e.Add("tb", false);
+                    }
+
+                    errore.Add(System.IO.Path.GetFileName(nomeFile), e);
+
+                    createKeyIfExistDataExcel(new List<int>() { 1, 2, 3, 5 });
+
+                    dataExcelD[1].Add("1");
+                    dataExcelD[2].Add((new NamePadre(commessaP: (string)titolo["COMMESSA"], articoloP: (string)titolo["ARTICOLO"], posP: p)).ToString());
+                    dataExcelD[3].Add("");
+                    dataExcelD[5].Add("");
+
+                    dataExcelD[1].Add("");
+                    dataExcelD[2].Add("");
+                    dataExcelD[3].Add("");
+                    dataExcelD[5].Add("");
+                }
+            }
+
+            //frm.lblFile.Text = "Compilazione excel in corso.";
                 
-                frm.pb.Visible = false;
-                frm.lblAnalisi.Visible = false;
+            //frm.pb.Visible = false;
+            //frm.lblAnalisi.Visible = false;
 
-                this.gestiscoExcel(dataExcelD);
+            gestiscoExcel(dataExcelD);
 
-                frm.Close();
-                frm.Dispose();
+            emissione.AnalizzaDwg.frmMain.gestiscoErrori((IDictionary)errore);
 
-                System.Windows.Forms.MessageBox.Show("Estrazione lunghezza barre", "Operazione conclusa.", MessageBoxButtons.OK);
-            }
-            catch (System.Exception e)
-            {
-                System.Diagnostics.Debug.WriteLine("Erroraccio: " + e);
-            }
+            //frm.Close();
+            //frm.Dispose();
 
-
+            //System.Windows.Forms.MessageBox.Show("Estrazione lunghezza barre", "Operazione conclusa.", MessageBoxButtons.OK);
         }
-        private void createKeyIfExistDataExcel(List<int> colonna) 
+        private static void createKeyIfExistDataExcel(List<int> colonna) 
         {
             foreach (int col in colonna)
             {
@@ -163,17 +217,30 @@ namespace emissione
                 }
             }
         }
-        private string ChooseDirectory()
+        public static void gestiscoExcel(IDictionary<int, List<string>> data)
         {
-            string path;
-            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
-            {
-                System.Windows.Forms.DialogResult result = dialog.ShowDialog();
-                path = dialog.SelectedPath;
-            }
-            return path;
+            IDictionary<string, dynamic> dataExcel = new Dictionary<string, dynamic>();
+
+            dataExcel.Add("percorso", path + "/");
+            dataExcel.Add("nomeFile", "commessa");
+
+            IDictionary<int, string> intestaturaToExc = new Dictionary<int, string>();
+            intestaturaToExc[1] = "Posizione";
+            intestaturaToExc[2] = "Padre";
+            intestaturaToExc[3] = "Figlio";
+            intestaturaToExc[4] = "Descrizione";
+            intestaturaToExc[5] = "Quantità";
+            intestaturaToExc[6] = "Destinazione";
+
+
+            dataExcel.Add("intestatura", intestaturaToExc);
+
+            dataExcel.Add("data", data);
+
+            var a = new Excel();
+            a.WriteSample(dataExcel);
         }
-        private List<Table> findTabella(Database db)
+        private static List<Table> findTabella(Database db)
         {
             List<Table> result = new List<Table>();
 
@@ -200,7 +267,7 @@ namespace emissione
 
             return result;
         }
-        private List<BlockReference> ListaBlocchi(Database db)
+        private static List<BlockReference> ListaBlocchi(Database db)
         {
             List<BlockReference> result = new List<BlockReference>();
  
@@ -227,7 +294,7 @@ namespace emissione
 
             return result;
         }
-        private List<string> GetTableIndice(Table tabella, int indice)
+        private static List<string> GetTableIndice(Table tabella, int indice)
         {
             List<string> result = new List<string>();
 
@@ -242,7 +309,7 @@ namespace emissione
 
             return result;
         }
-        private double findlunghezzaBarraMax(Database db, List<BlockReference> listaBlocchi, string testoToFind)
+        private static double findlunghezzaBarraMax(Database db, List<BlockReference> listaBlocchi, string testoToFind)
         {
             List<double> result = new List<double>();
 
@@ -269,7 +336,7 @@ namespace emissione
 
             return max;
         }
-        private Boolean findInTable(IDictionary intestatura, string toFind)
+        private static Boolean findInTable(IDictionary intestatura, string toFind)
         {
             var keys = intestatura.Contains(toFind);
 
@@ -280,9 +347,14 @@ namespace emissione
 
             return false;
         }
-        private IDictionary findLunghezzaBarra(Database db, List<BlockReference> listaBlocchi, string testo)
+        private static IDictionary findLunghezzaBarra(Database db, List<BlockReference> listaBlocchi, string testo)
         {
+            // Cerco in tutto il modello il testo, MText e Text
+
             IDictionary<string, string> result = new Dictionary<string, string>();
+
+            result["lunghezza"] = "";
+            result["testo"] = "";
 
             using (Transaction acTrans = db.TransactionManager.StartTransaction())
             {
@@ -307,19 +379,18 @@ namespace emissione
                                     String[] split = toAnalize.Split("/".ToCharArray());
 
 
-                                    result.Add("lunghezza", (Convert.ToDouble(split[2]).ToString()));
+                                    result["lunghezza"] = (Convert.ToDouble(split[2]).ToString());
 
                                     String[] testoCompleto = toAnalize.Split(" ".ToCharArray());
 
-                                    result.Add("testo", (testoCompleto[testoCompleto.Length - 1]).ToString());
+                                    result["testo"] = testoCompleto[testoCompleto.Length - 1].ToString();
 
-                                    return (IDictionary)result;
+                                    return (IDictionary) result;
                                 }
                             }
                             else if (ent.GetType() == typeof(DBText))
                             {
                                 DBText dbtext = (DBText)acTrans.GetObject(obj, OpenMode.ForRead);
-                                ///*ed*/.WriteMessage("Text-Type: " + ent.GetType().ToString() + "   |   Text-String: " + dbtext.TextString + "\n");
                             }
                         }
                     }
@@ -327,7 +398,7 @@ namespace emissione
             }
             return (IDictionary)result;
         }
-        private IDictionary findTitolo(Database db, List<BlockReference> listaBlocchi, List<string> testoToFind)
+        private static IDictionary findTitolo(Database db, List<BlockReference> listaBlocchi, List<string> testoToFind)
         {
             IDictionary<string, string> result = new Dictionary<string, string>();
 
@@ -355,7 +426,7 @@ namespace emissione
 
             return (IDictionary)result;
         }
-        public IDictionary getIntestaturaTabella(Table tabella)
+        public static IDictionary getIntestaturaTabella(Table tabella)
         {
             IDictionary<string, int> result = new Dictionary<string, int>();
 
@@ -373,29 +444,6 @@ namespace emissione
             }
 
             return (IDictionary)result;
-        }
-        public void gestiscoExcel(IDictionary<int, List<string>> data)
-        {
-            IDictionary<string, dynamic> dataExcel = new Dictionary<string, dynamic>();
-
-            dataExcel.Add("percorso", this.path+"/");
-            dataExcel.Add("nomeFile", "commessa");
-
-            IDictionary<int, string> intestaturaToExc = new Dictionary<int, string>();
-            intestaturaToExc[1] = "Posizione";
-            intestaturaToExc[2] = "Padre";
-            intestaturaToExc[3] = "Figlio";
-            intestaturaToExc[4] = "Descrizione";
-            intestaturaToExc[5] = "Quantità";
-            intestaturaToExc[6] = "Destinazione";
-
-
-            dataExcel.Add("intestatura", intestaturaToExc);
-            
-            dataExcel.Add("data", data);
-
-            var a = new Excel();
-            a.WriteSample(dataExcel);
         }
     }
     public class NamePadre
@@ -424,31 +472,31 @@ namespace emissione
         private Boolean minore = false;
         public LunghezzaPercentuale(double lunghezzaP, double lunghezzaBarraMaxP)
         {
-            this.lunghezza = lunghezzaP;
-            this.lunghezzaBarraMax = lunghezzaBarraMaxP;
+            lunghezza = lunghezzaP;
+            lunghezzaBarraMax = lunghezzaBarraMaxP;
 
             if (lunghezzaP != 0 && lunghezzaBarraMaxP !=0) 
             { 
-                this.tmpMisure = (IDictionary<double, double>) this.misureBlindate();
-                this.result = this.findResult();
+                tmpMisure = (IDictionary<double, double>) misureBlindate();
+                result = findResult();
             }
             else
             {
-                this.result = 0;
+                result = 0;
             }
 
         }
         public double findResult()
         {
-            double res = 0.5;
-            for (int i = this.tmpMisure.Count-1; i >= 0; i--)
+            double res = 1;
+            for (int i = tmpMisure.Count-1; i >= 0; i--)
             {
                 try
                 {
-                    double toCheck = this.tmpMisure.ElementAt(i).Key;
-                    if(this.lunghezzaBarraMax <= toCheck)
+                    double toCheck = tmpMisure.ElementAt(i).Key;
+                    if(lunghezzaBarraMax <= toCheck)
                         {
-                        return (double) this.tmpMisure.ElementAt(i).Value;
+                        return (double) tmpMisure.ElementAt(i).Value;
                     }
                         
                 }
@@ -464,7 +512,8 @@ namespace emissione
         {
             IDictionary<double, double> risultato = new Dictionary<double, double>();
 
-            List<double> valori = new List<double>() {0.5,
+            List<double> valori = new List<double>() {
+                0.5,
                 0.333,
                 0.25,
                 0.2,
@@ -488,7 +537,7 @@ namespace emissione
                 0.043,
                 0.042,
                 0.04,
-                0.38,
+                0.038,
                 0.037,
                 0.036,
                 0.034,
@@ -500,16 +549,17 @@ namespace emissione
                 0.028,
                 0.027,
                 0.026,
-                0.025 };
+                0.025 
+            };
 
             foreach (double tmp in valori) 
             {
-                risultato[Math.Round(tmp * this.lunghezza, 0)] = tmp;
+                risultato[Math.Round(tmp * lunghezza, 0)] = tmp;
             }
 
             return (IDictionary) risultato;
         }
         public double result { get; set; }
-        public override string ToString() => this.result.ToString();
+        public override string ToString() => result.ToString();
     }
 }

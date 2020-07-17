@@ -70,11 +70,6 @@ namespace emissione
                     for (int i = 2; listEnumerator.MoveNext() == true; i++)
                     {
                         var valore = listEnumerator.Current;
-
-                        System.Diagnostics.Debug.WriteLine(valore);
-                        System.Diagnostics.Debug.WriteLine(i);
-                        System.Diagnostics.Debug.WriteLine(colonna);
-
                         excelWorksheet.Cells[i, colonna] = valore;
                     }
                 }
