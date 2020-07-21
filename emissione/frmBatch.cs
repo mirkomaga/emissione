@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using emissione.Properties;
 using System.Drawing;
 using Microsoft.Office.Interop.Excel;
+using Autodesk.AutoCAD.DatabaseServices;
+using SixLabors.Primitives;
 
 namespace EdgeCode
 {
@@ -80,6 +82,7 @@ namespace EdgeCode
             dlgOpenList.CheckFileExists = true;
             dlgOpenList.Multiselect = false;
 
+
             if (dlgOpenList.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 StreamReader srList = new StreamReader(dlgOpenList.FileName);
@@ -92,7 +95,7 @@ namespace EdgeCode
                     FileInfo fi = new FileInfo(strBuff);
                     if (fi.Exists) this.AddFileToList(lstFiles, fi);
                 }
-
+                
                 srList.Close();
                 UpdateCount();
             }
@@ -209,6 +212,7 @@ namespace EdgeCode
             ListViewItem itm = lstFiles.Items.Add(fi.Name);
             itm.SubItems.Add(szFolder);
             itm.SubItems.Add("");
+
         }
 
         private void lstFiles_DragEnter(object sender, DragEventArgs e)
@@ -273,6 +277,8 @@ namespace EdgeCode
                 }
                 UpdateCount();
             }
+
+            this.resizeLW();
         }
 
         // riempi lista programmaticamente da elenco esterno
@@ -467,7 +473,6 @@ namespace EdgeCode
 
         private void toolStripStatusLabel1_Click(object sender, EventArgs e)
         {
-
         }
 
         private void toolStripStatusLabel2_Click(object sender, EventArgs e)
@@ -528,13 +533,15 @@ namespace EdgeCode
                         }
                     }
 
-                    ((System.Windows.Forms.ListViewItem)file).ImageIndex = errToShow;
+                    //((System.Windows.Forms.ListViewItem)file).ImageIndex = errToShow;
+                    ((System.Windows.Forms.ListViewItem)file).SubItems[2].Text = errToShow.ToString();
                 }
                 else
                 {
                     ((System.Windows.Forms.ListViewItem)file).Remove();
                 }
             }
+            this.resizeLW();
         }
 
         private void toolStripStatusLabel4_Click(object sender, EventArgs e)
@@ -547,5 +554,56 @@ namespace EdgeCode
 
         }
 
+        private void lstFiles_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
+        {
+            //e.SubItem.Bounds.Width
+            if (e.ColumnIndex == 2)
+            {
+                if(!string.IsNullOrEmpty(e.SubItem.Text))
+                {
+                    try
+                    {
+                        e.Graphics.DrawImage(imageList1.Images[int.Parse(e.SubItem.Text)], e.SubItem.Bounds.X, e.SubItem.Bounds.Y, e.Bounds.Height, e.Bounds.Height);
+                    }
+                    catch
+                    {
+                        System.Diagnostics.Debug.WriteLine("Non intero");
+                    }
+                }
+            }
+            else
+            {
+                e.Graphics.DrawString(e.SubItem.Text, e.SubItem.Font, Brushes.Black, e.Bounds);
+            }
+        }
+
+        private void lstFiles_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
+        {
+            e.DrawDefault = true;
+        }
+
+        private void frmBatch_Load(object sender, EventArgs e)
+        {
+            lstFiles.View = View.Details;
+            lstFiles.AllowColumnReorder = true;
+            lstFiles.FullRowSelect = true;
+            lstFiles.GridLines = true;
+            lstFiles.OwnerDraw = true;
+        }
+
+        private void resizeLW()
+        {
+            //lstFiles.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent);
+            //lstFiles.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent);
+            //lstFiles.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
+            lstFiles.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+        }
+    }
+    public class MyListView : ListView
+    {
+        protected override void OnDrawSubItem(System.Windows.Forms.DrawListViewSubItemEventArgs e)
+        {
+            base.OnDrawSubItem(e);
+        }
     }
 }

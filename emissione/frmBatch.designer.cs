@@ -44,25 +44,25 @@
             this.col1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.col2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.col3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.btnAdd = new System.Windows.Forms.ToolStripButton();
+            this.btnDelete = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.btnClearAll = new System.Windows.Forms.ToolStripButton();
+            this.btnRedo = new System.Windows.Forms.ToolStripButton();
             this.fldCount = new System.Windows.Forms.ToolStripTextBox();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.cmdLoadList = new System.Windows.Forms.ToolStripButton();
+            this.cmdSaveList = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.statusBot = new System.Windows.Forms.StatusStrip();
             this.lgnd1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.lgnd2 = new System.Windows.Forms.ToolStripStatusLabel();
-            this.btnAdd = new System.Windows.Forms.ToolStripButton();
-            this.btnDelete = new System.Windows.Forms.ToolStripButton();
-            this.btnClearAll = new System.Windows.Forms.ToolStripButton();
-            this.btnRedo = new System.Windows.Forms.ToolStripButton();
-            this.cmdLoadList = new System.Windows.Forms.ToolStripButton();
-            this.cmdSaveList = new System.Windows.Forms.ToolStripButton();
             this.lgnd3 = new System.Windows.Forms.ToolStripStatusLabel();
-            this.tsPd = new System.Windows.Forms.ToolStripProgressBar();
             this.nameFile = new System.Windows.Forms.ToolStripStatusLabel();
             this.counter = new System.Windows.Forms.ToolStripStatusLabel();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
+            this.tsPd = new System.Windows.Forms.ToolStripProgressBar();
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider1)).BeginInit();
             this.toolStrip1.SuspendLayout();
             this.statusBot.SuspendLayout();
@@ -158,6 +158,8 @@
             this.lstFiles.TabIndex = 12;
             this.lstFiles.UseCompatibleStateImageBehavior = false;
             this.lstFiles.View = System.Windows.Forms.View.Details;
+            this.lstFiles.DrawColumnHeader += new System.Windows.Forms.DrawListViewColumnHeaderEventHandler(this.lstFiles_DrawColumnHeader);
+            this.lstFiles.DrawSubItem += new System.Windows.Forms.DrawListViewSubItemEventHandler(this.lstFiles_DrawSubItem);
             this.lstFiles.SelectedIndexChanged += new System.EventHandler(this.lstFiles_SelectedIndexChanged);
             this.lstFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.lstFiles_DragDrop);
             this.lstFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.lstFiles_DragEnter);
@@ -176,6 +178,15 @@
             // 
             this.col3.Text = "Stato";
             this.col3.Width = 69;
+            // 
+            // imageList1
+            // 
+            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
+            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
+            this.imageList1.Images.SetKeyName(0, "exclamation.png");
+            this.imageList1.Images.SetKeyName(1, "bullet_error.png");
+            this.imageList1.Images.SetKeyName(2, "information.png");
+            this.imageList1.Images.SetKeyName(3, "timer.png");
             // 
             // toolStrip1
             // 
@@ -197,10 +208,54 @@
             this.toolStrip1.Size = new System.Drawing.Size(812, 25);
             this.toolStrip1.TabIndex = 11;
             // 
+            // btnAdd
+            // 
+            this.btnAdd.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.btnAdd.Image = ((System.Drawing.Image)(resources.GetObject("btnAdd.Image")));
+            this.btnAdd.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnAdd.Name = "btnAdd";
+            this.btnAdd.Size = new System.Drawing.Size(23, 22);
+            this.btnAdd.Text = "toolStripButton1";
+            this.btnAdd.ToolTipText = "Aggiungi file o cartelle";
+            this.btnAdd.Click += new System.EventHandler(this.btnAdd_Click_1);
+            // 
+            // btnDelete
+            // 
+            this.btnDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.btnDelete.Image = ((System.Drawing.Image)(resources.GetObject("btnDelete.Image")));
+            this.btnDelete.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnDelete.Name = "btnDelete";
+            this.btnDelete.Size = new System.Drawing.Size(23, 22);
+            this.btnDelete.Text = "toolStripButton1";
+            this.btnDelete.ToolTipText = "Rimuovi elementi selezionati";
+            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+            // 
+            // btnClearAll
+            // 
+            this.btnClearAll.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.btnClearAll.Image = ((System.Drawing.Image)(resources.GetObject("btnClearAll.Image")));
+            this.btnClearAll.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnClearAll.Name = "btnClearAll";
+            this.btnClearAll.Size = new System.Drawing.Size(23, 22);
+            this.btnClearAll.Text = "toolStripButton1";
+            this.btnClearAll.ToolTipText = "Azzera elenco file";
+            this.btnClearAll.Click += new System.EventHandler(this.btnClearAll_Click);
+            // 
+            // btnRedo
+            // 
+            this.btnRedo.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.btnRedo.Image = ((System.Drawing.Image)(resources.GetObject("btnRedo.Image")));
+            this.btnRedo.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.btnRedo.Name = "btnRedo";
+            this.btnRedo.Size = new System.Drawing.Size(23, 22);
+            this.btnRedo.Text = "toolStripButton1";
+            this.btnRedo.ToolTipText = "Azzera Stato";
+            this.btnRedo.Click += new System.EventHandler(this.btnRedo_Click);
             // 
             // fldCount
             // 
@@ -217,6 +272,28 @@
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
+            // 
+            // cmdLoadList
+            // 
+            this.cmdLoadList.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.cmdLoadList.Image = ((System.Drawing.Image)(resources.GetObject("cmdLoadList.Image")));
+            this.cmdLoadList.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.cmdLoadList.Name = "cmdLoadList";
+            this.cmdLoadList.Size = new System.Drawing.Size(23, 22);
+            this.cmdLoadList.Text = "Carica lista";
+            this.cmdLoadList.ToolTipText = "Carica elenco esecuzione precedente";
+            this.cmdLoadList.Click += new System.EventHandler(this.cmdLoadList_Click);
+            // 
+            // cmdSaveList
+            // 
+            this.cmdSaveList.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.cmdSaveList.Image = ((System.Drawing.Image)(resources.GetObject("cmdSaveList.Image")));
+            this.cmdSaveList.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.cmdSaveList.Name = "cmdSaveList";
+            this.cmdSaveList.Size = new System.Drawing.Size(23, 22);
+            this.cmdSaveList.Text = "Save list";
+            this.cmdSaveList.ToolTipText = "Salva lista con nome";
+            this.cmdSaveList.Click += new System.EventHandler(this.cmdSaveList_Click);
             // 
             // toolStripSeparator3
             // 
@@ -256,72 +333,6 @@
             this.lgnd2.Text = "L taglio mancante";
             this.lgnd2.Click += new System.EventHandler(this.toolStripStatusLabel2_Click);
             // 
-            // btnAdd
-            // 
-            this.btnAdd.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.btnAdd.Image = ((System.Drawing.Image)(resources.GetObject("btnAdd.Image")));
-            this.btnAdd.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnAdd.Name = "btnAdd";
-            this.btnAdd.Size = new System.Drawing.Size(23, 22);
-            this.btnAdd.Text = "toolStripButton1";
-            this.btnAdd.ToolTipText = "Aggiungi file o cartelle";
-            this.btnAdd.Click += new System.EventHandler(this.btnAdd_Click_1);
-            // 
-            // btnDelete
-            // 
-            this.btnDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.btnDelete.Image = ((System.Drawing.Image)(resources.GetObject("btnDelete.Image")));
-            this.btnDelete.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(23, 22);
-            this.btnDelete.Text = "toolStripButton1";
-            this.btnDelete.ToolTipText = "Rimuovi elementi selezionati";
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
-            // 
-            // btnClearAll
-            // 
-            this.btnClearAll.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.btnClearAll.Image = ((System.Drawing.Image)(resources.GetObject("btnClearAll.Image")));
-            this.btnClearAll.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnClearAll.Name = "btnClearAll";
-            this.btnClearAll.Size = new System.Drawing.Size(23, 22);
-            this.btnClearAll.Text = "toolStripButton1";
-            this.btnClearAll.ToolTipText = "Azzera elenco file";
-            this.btnClearAll.Click += new System.EventHandler(this.btnClearAll_Click);
-            // 
-            // btnRedo
-            // 
-            this.btnRedo.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.btnRedo.Image = ((System.Drawing.Image)(resources.GetObject("btnRedo.Image")));
-            this.btnRedo.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnRedo.Name = "btnRedo";
-            this.btnRedo.Size = new System.Drawing.Size(23, 22);
-            this.btnRedo.Text = "toolStripButton1";
-            this.btnRedo.ToolTipText = "Azzera Stato";
-            this.btnRedo.Click += new System.EventHandler(this.btnRedo_Click);
-            // 
-            // cmdLoadList
-            // 
-            this.cmdLoadList.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.cmdLoadList.Image = ((System.Drawing.Image)(resources.GetObject("cmdLoadList.Image")));
-            this.cmdLoadList.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.cmdLoadList.Name = "cmdLoadList";
-            this.cmdLoadList.Size = new System.Drawing.Size(23, 22);
-            this.cmdLoadList.Text = "Carica lista";
-            this.cmdLoadList.ToolTipText = "Carica elenco esecuzione precedente";
-            this.cmdLoadList.Click += new System.EventHandler(this.cmdLoadList_Click);
-            // 
-            // cmdSaveList
-            // 
-            this.cmdSaveList.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.cmdSaveList.Image = ((System.Drawing.Image)(resources.GetObject("cmdSaveList.Image")));
-            this.cmdSaveList.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.cmdSaveList.Name = "cmdSaveList";
-            this.cmdSaveList.Size = new System.Drawing.Size(23, 22);
-            this.cmdSaveList.Text = "Save list";
-            this.cmdSaveList.ToolTipText = "Salva lista con nome";
-            this.cmdSaveList.Click += new System.EventHandler(this.cmdSaveList_Click);
-            // 
             // lgnd3
             // 
             this.lgnd3.AccessibleName = "lgnd3";
@@ -329,14 +340,6 @@
             this.lgnd3.Name = "lgnd3";
             this.lgnd3.Size = new System.Drawing.Size(97, 17);
             this.lgnd3.Text = "Info mancanti";
-            // 
-            // tsPd
-            // 
-            this.tsPd.AutoSize = false;
-            this.tsPd.Name = "tsPd";
-            this.tsPd.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.tsPd.Size = new System.Drawing.Size(250, 16);
-            this.tsPd.Click += new System.EventHandler(this.toolStripProgressBar1_Click);
             // 
             // nameFile
             // 
@@ -353,13 +356,13 @@
             this.counter.Text = "0/0";
             this.counter.Click += new System.EventHandler(this.toolStripStatusLabel1_Click_1);
             // 
-            // imageList1
+            // tsPd
             // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "exclamation.png");
-            this.imageList1.Images.SetKeyName(1, "bullet_error.png");
-            this.imageList1.Images.SetKeyName(2, "information.png");
+            this.tsPd.AutoSize = false;
+            this.tsPd.Name = "tsPd";
+            this.tsPd.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.tsPd.Size = new System.Drawing.Size(250, 16);
+            this.tsPd.Click += new System.EventHandler(this.toolStripProgressBar1_Click);
             // 
             // frmBatch
             // 
@@ -373,6 +376,7 @@
             this.Controls.Add(this.toolStrip1);
             this.Name = "frmBatch";
             this.Text = "frmBatch";
+            this.Load += new System.EventHandler(this.frmBatch_Load);
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider1)).EndInit();
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
